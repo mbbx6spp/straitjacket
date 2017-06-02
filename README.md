@@ -5,9 +5,13 @@ A one-file framework for reasonable code in a functional style.
 
 ## Introduction
 
-Software is controversial. "Good" is subjective: what one likes, another hates.
-However, code solves problems with logic. Consequently, we can **objectively
-and dispassionately characterize logic in terms of complexity**. For example:
+Software design is controversial.
+
+"Good" is subjective: what one likes, another hates. However, code solves
+problems with logic. Consequently: **we can objectively characterize code in
+terms of correctness and completeness of the logic it represents.**
+
+For example:
 
 ```ruby
 def send_appropriate_email(input:)
@@ -45,10 +49,12 @@ def send_appropriate_email(input:)
 end
 ```
 
-This re-expression preserves original behavior, accentuating two pain points:
+This re-expression preserves original behavior, but on critical inspection
+there are some problems:
 
-1. What happens when `subject` is nil?
-2. Why not just make the `subject` an argument, since it's assign at the start?
+1. What happens our branch logic finds no match?
+2. Why not just make the `subject` an argument, since it's assigned first?
+3. What if `#send_email` fails?
 
 Let's address them with another iteration:
 
@@ -71,7 +77,7 @@ def email(subject:)
 end
 ```
 
-We can characterize this code objectively and dispassionately, too:
+Characterizing:
 
 `#determine_subject`:
 
@@ -79,67 +85,54 @@ We can characterize this code objectively and dispassionately, too:
 2. raises an error on unhandled input
 3. does nothing else
 
-`email`:
+`#email`:
 
 1. is indifferent to the subject it receives
 2. always sends an email, provided `send_email` "works"
 3. does nothing else
 
-**Our latest iteration is objectively less complex.**
+This is tigher because fails *explicitly*, but we still encounter fatal errors.
+The set of things which could cause our application to fail--errors, unexpected
+inputs (I'm looking at you, nil!), misconfigurations--all of it, are called
+**bottom**.
 
-So how can we think about complexity in general?
+The more bottom in your implementation, the more prone to defects it is.
 
 
-## Defining Complexity
+## Defining Defects
 
-Let's posit that code complexity is:
+Let's posit that **code completeness** is:
 
-> **Code we must write to account for all possible states of things.**
+> **Just enough code to reasonably address a problem.**
 
-Where "things" are:
+Our code will need to manage:
 
-1. **data**
-2. **the outside world** (ex. availability of a network; the current time)
+1. **state** (data)
 3. **logical decisions** (ex. email user?; print message?; render page?)
+2. **interactions with the world** (ex. networks; the current time)
 
-Naturally, these things are sources of complexity:
+The following naturally hinder code completeness because they increase bottom:
 
-1. changing data
-2. more of the outside world (especially parts we do not control)
-3. more branch logic (especially when non-exhaustive)
+1. changing ("mutable") state
+2. the outside world, especially parts we do not control
+3. branch logic, especially when non-exhaustive
 4. optional data (nil), which necessitates more branch logic
 
 (\#1 and \#2 are collectively referred to as **side effects**.)
 
-Simple software minimizes its exposure to complexity. Again, with the above
-lists in consideration:
+Ignoring bottom increases the likelihood of defects, which are "incorrectness."
 
-```ruby
-def determine_subject(input:)
-  case input
-  when :greet
-    "Hello"
-  when :goodbye
-    "Goodbye"
-  when :you_won
-    "You won"
-  else
-    raise "no subject for #{input}"
-  end
-end
+There is an intrinsic tool for dealing with bottom. This is **complexity**, or
+anticipating and dealing with the real, messy world we code in.
 
-def email(subject:)
-  send_email(subject: subject)
-end
-```
+There are ways of writing code which minimize bottom **and** complexity.
 
 
 ## "Simple" *is* an Aesthetic
 
-Again, with software, it is only possible to dispassionately analyze complexity.
 Straitjacket espouses an aesthetic, and it's fine if you disagree, but:
 
-**Minimally complex software is better than any alternative.**
+**Complete, minimally complex software is better than any alternative.**
 
 Without *some* complexity, nothing meaningful gets done. All human undertakings
 require data, side effects, and decisions. But *unnecessary* complexity is bad.
@@ -151,6 +144,8 @@ two categories. There's:
 
 The Straitjacket style of coding specifies how to write both. For code with no
 side effects, we write **functions**. For code with, we write **actions**.
+
+Actions are where we minimially and consciously introduce bottom to our code.
 
 
 ## Functions
@@ -189,7 +184,7 @@ Some examples of side effects:
 * printing to the screen
 * changing an original value provided to the function
 
-Of course, functions can do more than basic arithmetic operations. They can:
+Functions can do more than basic arithmetic operations. They can:
 
 * return another function
 * transform immutable data, returning a new value
@@ -238,7 +233,7 @@ fine, provided the method has no side effects. The is not ok:
 # NOT OK
 module Utility
   def email(subject:)
-    send_email(subject: subject) # some nasty side-effecting library function
+    send_email(subject: subject) # a side-effecting library function
   end
   module_function :email
 end
@@ -263,7 +258,7 @@ Actions are more involved. Here are their constraints. Actions:
 1. are simple objects mixing in `SJ::Ugly::Action` (more on this shortly)
 2. must have side effects
 3. must have one responsibility
-4. should be written sparingly--they are where complexity lives!
+4. should be written sparingly--they are where bottom lives!
 5. may have an outcome; if not, must return Unit
 
 That's all there is to actions. They:
@@ -287,7 +282,7 @@ Straitjacket has a bias against traditional objects. Why? Well, objects:
 4. do not usually warn about their side effectcs
 5. interact with other objects encapsulating their own (probably bad) behavior
 
-Objects are *predisposed* to complexity, and feel like a minefield at scale.
+Objects are *predisposed* to bottom, and feel like a minefield at scale.
 
 **It is ultimately easier communicating and reasoning about a set of things we
 must do. Solutions can always be expressed as a set of actions and functions.**
@@ -396,7 +391,8 @@ end
 ```
 
 We have defined a constant `Outcome` in the class of type `Struct`. All outcome
-values are `Struct`s. A `Struct` is essentially a list of named values.
+values are `Struct`s. A `Struct` is the closest data type we have in Ruby to
+a named tuple, which is a fixed-length value list. Like Python's `namedtuple`.
 
 If your eyes landed on this unconventional line of code:
 
@@ -553,7 +549,7 @@ In short:
 
 * Aspire to write Good code.
 * Aspire to make Bad code Good.
-* Use Ugly code anywhere, provided it doesn't violate Straitjacket constraints.
+* Use Ugly code in Good code if you must, but hold to Straitjacket constraints.
 
 ## Style
 
