@@ -1,367 +1,607 @@
 # Straitjacket
 
-A one-file framework (and a philosophy) facilitating composable Ruby code.
+An opinionated, one file framework for writing more reasonable code in a
+functional style which quarantines complexity.
 
 
 ## Introduction
 
-Writing good software is hard. _Why_ is debatable. Consider _giraffes_. Which
-giraffe is best? Are giraffes better than other creatures? OK, I know. The point
-is: judging software is similarly fraught.
-
-To do anything well, we need the right understanding and good tooling.
-
-
-## Pondering Giraffes
-
-On giraffes, some might ask:
-
-1. Should giraffes exist?
-2. Are giraffes good or evil?
-3. What is the essence of a giraffe?
-4. Do giraffes have souls?
-5. Why are giraffes always painted in watercolor?
-
-Who knows? But a better line of inquiry ought be more concrete:
-
-1. Which adaptations in musculature support the giraffe's neck?
-2. How come giraffes stand less than one hour after birth?
-3. What percentage of body weight do giraffes eat daily? \[it's 66lb, or 4%\]
-4. Arctic giraffes: what needs to change?
-5. Why are there no giraffe mathletes?
-
-When it comes to giraffes, there's no accounting for taste. But we can most
-assuredly account for **fitness of purpose in their context**. Software is no
-different. Software is giraffes all the way down. And we can characterize good
-software very easily as:
-
-> **The minimal expression of complexity, expressed in code and data, to serve
-> an particular computational need.**
-
-We do only the work required to meet the need. This is ideal because lower
-complexity means software will adapt easily to new needs. Maybe your software
-requirements have non-negotiable, ahem, particularies. This is reasonable and
-OK. We're go to war with the army we have.
-
-
-## Genericity, ~~Giraffes~~ Software, and Other Foibles
-
-OK, let's let go of the giraffe thing. Let's talk about software. I lied; more
-giraffes, specific to general:
-
-1. giraffes on the savannah
-2. giraffes in general
-3. four-legged land-dwelling animals
-4. mammals
-5. vertebrates
-6. animals
-
-The further down the list, the harder to make generalizations about the item.
-Why? Because if we observe something about animals, and want that observation to
-apply to giraffes on the savannah, our observation must be **broadly
-applicable**.
-
-For any software on the planet, you could make a similar list:
-
-1. the software you've written (with a specific business purpose)
-2. the framework(s)/library(ies) it uses
-3. the language(s)
-4. the language family/families
-5. software in general
-
-If we observe something about software in general, and want that observation to
-apply to the software you've written as well, our observation must be **broadly
-applicable**.
-
-What astounding observations are made herein by the author? Just what other,
-smarter people already figured out. To write good software, again:
-
-> **The minimal expression of complexity, expressed in code and data, to serve
-> an particular computational need.**
-
-...we must prize **compositionality**, or **the building of complex things out
-of simple things**. Writing good software is like building the Taj Mahal out of
-Duplo blocks.
-
-
-## Inheriting New Wisdom
-
-Straitjacket is a set of constraints that _almost_ forces users to write
-compositional software. But, since Ruby comes with few helpful offerings to this
-end (more on this later, of course), one has to know the spirit of the endeavor!
-
-The thesis of this framework and this document is simple:
-
-> **Elegant code is a minimally, but necessarily complex. We can segregate the
-> parts of our code which are dangerous from the parts that aren't, and we can
-> compose both types together to ship maintainable, reasonable software which
-> rarely surprises us.**
-
-Sadly, fellow Rubyists, we are awash in unnecessarily complexity, despite our
-best efforts to make things "simple", included but not limited to:
-
-- opinionated frameworks
-- conventions, not configuration
-- service objects--except in our ActiveRecord models, because Rails
-- switching to javascript (lol)
-- dabbling in Haskell in evenings, further aggravating our stupid RSI
-- a "few" "good" and "innovative" "approaches" that we and our coworkers are
-  annoyed by within a year
-
-[Editor's note: The author is speaking with a therapist, and offers apologies
-for the thinly veiled cynicism masquerading as giraffes. p.s. giraffes]
-
-These are misguided efforts, as are all solutions to misunderstood problems. We
-can do better.
-
-
-## Ruby, Not Helping
-
-In imperative OOP languages like the one we love, we do think a lot. We think
-about things. We have our `Blog`, `Todo`, `User` models. We have our
-`Sidekiq::Worker` mixin. When we do think about compositionality, we do so
-narrowly and in reference to objects: "I assemble objects from other objects
-and test each separately."
-
-Like this, sometimes:
+Software, like any creative endeavor, is controversial. "Good" is eternally
+subjective: what one likes, another detests. However, problems solved by code
+are logical. We may not agree on "good", but **we can objectively and
+dispassionately characterize code**. For example:
 
 ```ruby
-  module Greeter
-    def greet(name)
-      puts "#{greeting}, #{name}!"
-    end
+def send_appropriate_email(input:)
+  if input == :greet
+    send_email(subject: "Hello")
+  elsif input == :goodbye
+    send_email(subject: "Goodbye")
+  elsif input == :you_won
+    send_email(subject: "You won")
   end
-
-  class Worker
-    include Greeter
-
-    attr_reader :greeting
-
-    def initialize(greeting)
-      @greeting = greeting
-    end
-  end
-
-  class RudeWorker < Worker
-    def initialize
-      super("Step off")
-    end
-  end
-
-  class NiceWorker < Worker
-    def initialize
-      super("Welcome")
-    end
-  end
-
-  puts RudeWorker.new.greet("Bucky")  # => "Step off, Bucky!"
-  puts NiceWorker.new.greet("Friend") # => "Hello, Friend!"
+end
 ```
 
-This is contrived, but there is truth in the example. Succinctly:
+We can observe that this method:
 
-> **In OOP, one source of complexity is the _domain of objects_ we employ.
-> Another is _what any object does_. Yet another is _what state the object
-> hides_.**
+1. has three execution branches
+2. has undefined behavior unless input is `:greet`, `:goodbye`, or `:you_won`.
+3. might send an email when called
 
-Article of faith: one cannot think these three things simultaneously and stay
-sane at any large scale--the developer is serving three very demanding masters.
-
-
-## Ruby, Not Helping More
-
-Here are two opposing things: **simple** vs. **complex**. Separately, here are
-two more: **easy** vs. **difficult**. The holy grail of software is **simple**
-and **easy**.
-
-Straitjacket facilitates **simple**, and it does so with certitude.
-(Unfortunately, it cannot promise **easy**.) The philosophy of Straitjacket
-regard a few **sources of complexity** with disdain. In no particular order:
-
-- pieces of information that might change, or **mutable state**
-- the scary world of what's on the screen, what's in your database, what time
-  it is, or what the next random number will be--collectively **side effects**
-- **nil**, or the possibility that any value might not be there
-- **incomplete branch logic** which does not exhaust all possibilities
-- **implicit or coincidental code decisions** (defaults; reliance on unreliable
-  values)
-
-These account for most complexity in code. And, when unhandled, bugs. If we code
-simply, we will see these pitfalls from a mile away.
-
-Our understandings of these liabilities grow, too. An example of this is
-realizing that Ruby mixins are in fact mutations of the entire Ruby runtime.
-Ever been bitten by someone else's monkey-patch? That's **mutable state** and
-**implicit code decision** problems you're having.
-
-Similarly, we might think this function pretty benign:
+Some may prefer this functionally identical version:
 
 ```ruby
-  def get_time
-    Time.now.to_i
-  end
+def send_appropriate_email(input:)
+  subject =
+    case input
+    when :greet
+      "Hello"
+    when :goodbye
+      "Goodbye"
+    when :you_won
+      "You won"
+    end
+
+  send_email(subject: subject)
+end
 ```
 
-It isn't. If called twice, it returns different values. Why? It relies on
-global, mutable state known as "time". To reason about this function, we must
-reason too about time. Here's another thing we Rubyists overlook at our peril:
+This re-expression preserves all the original behavior, but accentuates a few
+painful things:
+
+1. What happens when `subject` is nil?
+2. Why not just make the `subject` an argument, since it's assign at the start?
+
+So this code is already an improvement because of the issues it highlights.
+Let's address those issues with another iteration:
 
 ```ruby
-  user     = User.find(1)
-  nickname = user.name # oops, it's nil
-  send_email(nickname)
-```
-
-Our code necessarily ends up looking like this:
-
-```ruby
-  user     = User.find(1)
-  nickname = user.name
-  if !!nickname
-    send_email(nickname)
+def determine_subject(input:)
+  case input
+  when :greet
+    "Hello"
+  when :goodbye
+    "Goodbye"
+  when :you_won
+    "You won"
   else
-    raise 'no nickname'
+    raise "no subject for #{input}"
   end
-```
-
-Tests--we have tests, right?--must set up two cases: one with a nickname, one
-without. **nil** always produces branch complexity: the logic required for
-maybe having a value, maybe not. Woe unto you if you miss this need, especially
-as your software grows more and more complex.
-
-All of this is to say, complexity is something we can _talk about_ and _avoid_.
-
-Sadly, Ruby has nothing to say about this. `nil` is ubiquitous. Mutation is
-normal and encouraged. Branch logic is often incomplete (`if` without `else`),
-yielding essentially undefined behavior. The main mode of composition is mixins
-and object inheritance.
-
-**To write simpler software, we borrow from other paradigms.**
-
-Half of you reading this already realize that the author is a fan of
-**functional programming**, which is an approach to coding that is mindful of
-compositionality and complexity. **Functional programming is an approach, not
-a language.** Consequently, we can write functional code in Ruby.
-
-And, the author argues, we should. Now, for the nitty gritty.
-
-
-## Borrowing a Cup of Sugar
-
-I'm going to skip straight to the punchline. Broadly speaking, we _can_ choose
-to categorize code into two major groups:
-
-1. Side-effecting **actions**
-2. Pure **functions**
-
-This, you might guess, doesn't really have anything to do with OOP. Rather than
-thinking about types of **things**, we're thinking about types of **doings**.
-Some Ruby projects employ objects tasked with doing something. These classes,
-widely known as "service objects", might have names like:
-
-- `SiteVisitorRecorder`
-- `InvoiceCalculator`
-- `InputSanitizer`
-- `RateLimiter`
-- `SignupValidator`
-
-...or whatever business the project has which don't seem like obvious "model"
-concerns. These service objects are an admirable attempt at isolating
-complexity.
-
-But there's something amiss here. All these classes end in "-er" or "-or", and
-seem to be reaching for some common semantic _something_. Let's rename them:
-
-- `RecordSiteVisitor`
-- `CalculateInvoice`
-- `SanitizeInput`
-- `RateLimit`
-- `ValidateSignup`
-
-That's it! These are really **verbs** in **noun** clothing. OOP fetishizes
-_things_, so we contort ourselves into using them. Alas, that's how we've come
-to think. But constraints are liberating, and imposing the label of **action**
-allows us an important benefit:
-
-> **We can standardize the interface to all actions. Ever.**
-
-This is because, of any action, we can say:
-
-1. An action MAY require **inputs**.
-2. Every action MUST be **callable**.
-3. An action MAY report an **outcome value**.
-4. Every action MUST have some **side effect(s)**.
-5. The action MAY have different side effects and MAY return a different
-   outcome value every call.
-
-What does this leave us with for the other type of code, **functions**?
-Of functions, we can say:
-
-1. A function MAY require **inputs**.
-2. Every function MUST be **callable**.
-3. A function MAY return a **value**.
-4. Every function MUST NOT have **side effects**.
-4. Given the same inputs, the function MUST return the same value.
-
-**Together, these two types of code comprise a complete set of all code
-possibilities. It is possible to express all code this way.**
-
-
-## Actions the Straitjacket Way
-
-TODO
-
-
-## Functions the Straitjacket Way
-
-This part's easy. Ruby gives us **methods**, but they're always conventionally
-attached to an object. But there's a nifty `module_function` method which at
-least lets us pretend that we're dealing with a platonic function:
-
-```ruby
-module MyApp
-  def add(list_values:)
-    list_values.sum
-  end
-  module_function :add
-
-  def path(prefix:, list_components:)
-    '/' + [prefix, list_components].flatten.join('/')
-  end
-  module_function :path
 end
 
-MyApp.add(list_values: [1, 2, 3]) # => 6
-MyApp.path(prefix: 'Macintosh HD', list_components: ['Documents', 'foo.txt'])
-  # => "/Macintosh HD/Documents/foo.txt"
-```
-
-Or, depending on your taste, this:
-
-```ruby
-module MyApp
-  module_function # affects everything after
-
-  def add(args:)
-    args.sum
-  end
-
-  def path(prefix:, list_components:)
-    [prefix, list_components].flatten.join('/')
-  end
+def email(subject:)
+  send_email(subject: subject)
 end
 ```
 
-Defining functions this way clearly denotes that they are, well, functions.
-Importantly:
+We can characterize this code objectively and dispassionately, too:
 
-1. A function MAY call any other function.
-2. An action MAY call any function.
-3. A function MUST NOT call an action. (side effects!)
+`#determine_subject`:
 
-That's it for functions.
+1. has 4 branches handling **every** possible input case, thanks to `else`
+2. raises an error on unhandled input
+3. does nothing else
 
-n.b. `module_function` is only available within `Module` definitions, not
-`Class`!
+`email`:
+
+1. is indifferent to the subject it receives
+2. always sends an email, provided `send_email` "works"
+3. does nothing else
+
+**Our last iteration is objectively less complex.**
+
+OK, well how can we think about complexity in general?
 
 
+## Defining Complexity
+
+Let's posit that code complexity is:
+
+> **Code we must write to account for all possible states of things.**
+
+Where "things" are:
+
+1. **data** (ex. a user address; an email's contents; an object's state)
+2. **the outside world** (ex. availability of a network; the current time)
+3. **logical decisions** (ex. email user?; print message?; render page?)
+
+Naturally, these things are sources of complexity:
+
+1. more data (especially data which can change or may not exist)
+2. more interaction with the outside world (especially parts we do not control)
+3. more decisions (especially ones which do not handle every case)
+
+(\#1 and \#2 are collectively referred to as **side effects**.)
+
+Simple software minimizes its exposure to complexity. This is why the latest
+iteration of our code is objectively simpler. Again, with the above lists in
+consideration:
+
+```ruby
+def determine_subject(input:)
+  case input
+  when :greet
+    "Hello"
+  when :goodbye
+    "Goodbye"
+  when :you_won
+    "You won"
+  else
+    raise "no subject for #{input}"
+  end
+end
+
+def email(subject:)
+  send_email(subject: subject)
+end
+```
+
+
+## "Simple" *is* an Aesthetic
+
+Again, with software, there's no accounting for taste--but it *is* possible to
+dispassionately analyze complexity. Here is Straitjacket's *raison d'etre*.
+It is a belief and an aesthetic, and it's fine if you don't like it:
+
+**Minimally complex software is better than any alternative.**
+
+To the author of Straitjacket, this is really important. Without some
+complexity, nothing gets done. All human undertakings require *some* complexity.
+But even one scintilla of *unnecessary* complexity is not welcome. That's the
+aspiration of Straitjacket. Pragmatic, no?
+
+This project does something bold. It asserts that **all** code fits neatly into
+two categories. There's:
+
+* code without side effects
+* code with side effects
+
+The Straitjacket style of coding specifies how to write both. In fact, that's
+all the style is. The rest, as they say, tends to fix itself.
+
+For code with no side effects, we write **functions**. For code with side
+effects, we write **actions**.
+
+
+## Functions
+
+Functions, to hear any functional programming advocate explain them, are just
+like mathematical functions:
+
+```
+f(x) = 3x + 4
+```
+
+As in math, any input `x` provided will always yield the same output. There's no
+way in mathematical functions to say:
+
+```
+f(x) = puts (3x + 4)
+```
+
+To `puts` anything, we'd have to be outside of a function:
+
+```
+f(x) = 3x + 4
+puts f(3)
+```
+
+Any operation with a side effect--something that if done more than once could
+cause unwanted outcomes--does not belong in a function.
+
+Functions which do not side-effect are referred to as **pure**.
+
+Some examples of side effects:
+
+* querying a database
+* getting the current time
+* doing anything that requires network access
+* file system manipulations
+* printing to the screen
+* changing an original value provided to the function
+
+Obviously, functions can do more than basic arithmetic operations. They can:
+
+* return another function
+* transform immutable data, returning a new value
+* transform actions to other actions, which in and of itself is pure--so
+  long as no action is never invoked
+
+Here are the only inviolable constraints for functions. Functions:
+
+1. have no side effects
+2. are defined on a module using `module_function`
+3. are preferred to actions where possible
+4. must have only one responsibility
+
+In Ruby, whenever we define a method, it is inevitably defined on some object.
+The best, and "Straitjacket" way to implement functions is with a helper method
+called `module_function`:
+
+```ruby
+module Utility
+  def multiply(*args)
+    args.inject(&:*)
+  end
+  module_function :multiply
+
+  def double(value:)
+    multiply(value, 2)
+  end
+  module_function :double
+end
+```
+
+What [`module_function`](http://ruby-doc.org/core-2.4.1/Module.html#method-i-module_function)
+does is make the method callable directly on the module itself:
+
+```ruby
+Utility.multiply(1,2,3)
+```
+
+This is the closest approximation of pure functions attainable in Ruby.
+
+**Which module you locate your functions in is up to you!  Straitjacket has no
+opinions on where your functions live. That said, it's regarded as good practice
+to keep functions as adjacent as possible to where they are called.**
+
+Keen observers will note the above function calling a method on the `args`
+input. This is just fine, provided the method has no side effects. The following
+method is not ok:
+
+```ruby
+# NOT OK
+module Utility
+  def email(subject:)
+    send_email(subject: subject) # some nasty library function
+  end
+  module_function :email
+end
+```
+
+Look familiar? It's our function from above! It turns out this function hides
+side effects. We didn't know better before, but now we do. This should be
+written as an action instead.
+
+
+## Actions
+
+What's really awesome about *good constraints* is *enforced consistency*. With
+functions, we had these constraints. Functions:
+
+1. have no side effects
+2. are defined on a module using `module_function`
+3. are preferred to actions where possible
+4. must have only one responsibility
+
+These aren't too much to keep in your head. But actions are more involved.
+Let's get the constraints out of the way. Actions:
+
+1. are simple objects mixing in `SJ::Ugly::Action` (more on this shortly)
+2. must have side effects
+3. must have one responsibility
+4. should be written sparingly--they are where complexity lives!
+5. may have an outcome; if not, must return Unit
+
+### Constraint \#1: the `SJ::Ugly::Action` mixin
+
+We'll explain the use of the word `Ugly` later in this document, but it is not
+(very) pejorative. It simply means that the code cannot conform to
+Straitjacket's ideals. It turns out that Straitjacket is written in a way
+that violates its own principles. (It has to be. hah!)
+
+Let's back up for a second. Straitjacket has a bias against them. Why?
+Because objects:
+
+1. are designed to store data that changes (have mutable state)
+2. must be mindfully authored to have one responsibility, but typically are not
+3. are alien to non-technical people, who think in tasks--not things
+4. do not usually warn about their side effectcs
+5. by design interact with other objects which abstract their own (probably
+   bad) behavior
+
+Objects are *predisposed* to complexity, and feel like a minefield at scale.
+
+**It ends up being easier communicating and reasoning about a set of things we
+must do. Solutions can always be expressed as a set of actions and functions.**
+
+We *do* implement actions *as* objects, but that's because objects are a great
+fit for approximating the stateful context that an action happens in.
+
+Actions are easier to:
+
+1. test the side effects of, when appropriately small in scope
+2. compose into bigger actions--also easy to test this composition
+4. communicate with product owners about
+
+Here's an example of a silly action:
+
+```ruby
+class GreetPerson
+  include SJ::Ugly::Action
+
+  private
+
+  def initialize(name:)
+    validate do |errors|
+      errors << 'bad name' unless name.respond_to?(:to_str)
+    end
+
+    @name = name
+  end
+
+  def invoke!
+    puts "Hello, #{@name}!"
+
+    return Unit
+  end
+end
+```
+
+And here's how we'd call it:
+
+```ruby
+PrintGreeting.mk(name: 'Joshua').call!
+```
+
+Mixing in `SJ::Ugly::Action` adds one class method to your object, `.mk` (read
+"make"). `.mk` is the sole interface to an action. `.mk` calls `.new` on the
+host class, which in turn invokes `#initialize`, like any other Ruby object.
+Arguments provided to `.mk` are passed through to `#initialize`.
+
+`SJ::Ugly::Action` adds two private instance methods to the class: `#validate`
+and `#call!`. `#validate` is used optionally by `#initialize` to check that
+arguments are sane. It raises if any errors are added to `errors` in the block.
+
+`#invoke!` calls `#call!`, which is implemented by the action, and uses its
+return value in a special way described below.
+
+That's the whole framework.
+
+### Constraint \#2: Side Effects
+
+**The entire aim of Straitjacket as a library is to quarantine complexity and
+add lots of thoughtfulness and a bit of friction to adding complexity.**
+
+Actions:
+
+1. require explicit inputs (and preferably validate them)
+2. put side-effecting code in one place
+3. have a uniform interface `.mk`, which is added reliably by a mixin
+4. provide a pipeline for feeding the outcome of one action to others
+
+### Constraint \#3: One Responsibility
+
+Actions should only do one topical thing. This may involve invoking other
+actions, or doing *literally* different things, but they should all be in
+service of the named action being taken.
+
+### Constraint \#4: Sparingly
+
+Actions should be written only when necessary, which will be surprisingly
+obvious. If your business needs to you to do something dangerous, you'll need
+an action. Otherwise, stick to functions.
+
+### Constraint \#5: Maybe Outcome
+
+Actions may optionally return values called "outcomes". Straitjacket imposes
+some constraints on these values and how they are used. Let's take a look at
+an action with an outcome:
+
+```ruby
+class GreetPerson
+  include SJ::Ugly::Action
+
+  Outcome = Struct.new(:entire_message)
+
+  private
+
+  def initialize(name:)
+    validate do |errors|
+      errors << 'bad name' unless name.respond_to?(:to_str)
+    end
+
+    @name = name
+  end
+
+  def invoke!
+    entire_message = "Hello, #{@name}!"
+
+    puts entire_message
+
+    return Outcome.new(entire_message)
+  end
+end
+```
+
+And the calling code that needs the outcome from the action:
+
+```ruby
+GreetPerson.mk(
+  name: "Joshua"
+).call! do |outcome|
+  entire_message, = *outcome
+  # do something with the "entire message"
+end
+```
+
+We have defined a constant `Outcome` in the class of type `Struct`. All outcome
+values are `Struct`s so they are uniformly structured. A `Struct` is essentially
+a list of named values.
+
+If your eyes landed on this unconventional line of code:
+
+```ruby
+  entire_message, = *outcome # sets entire_message to outcome.entire_message
+```
+
+...don't worry. Splatting a `Struct` is just like splatting an array:
+
+```ruby
+  value1, = *[1] # sets value1 to 1
+```
+
+If we don't include the trailing comma, Ruby doesn't know that we're splatting:
+
+```ruby
+  # NO GOOD
+  value1 = outcome # sets value1 to instance of Outcome struct
+```
+
+For multiple values, it looks more familiar:
+
+```ruby
+  value1, value2 = *outcome
+```
+
+**Actions MAY have an Outcome, which will be handed by the mixin to the block
+given when the action was called. This forces the outcome into a "context"--only
+code within the provided block can access the outcome. This constraint is
+intentional.**
+
+Once any code calls an action, something changes. The code is now in the real
+world of "dangerous" actions. Forcing the outcome of an action to be accessible
+only *in a context* is admitting that subsequent operations are "tainted" by
+the dangerous world outside. It says "This is impure, you're in the wild west."
+
+For actions with no `Outcome` (which should explicitly `return Unit`), there is
+no need to provide a block when calling:
+
+```ruby
+class UnitAction
+  include SJ::Ugly::Action
+
+  private
+
+  def initialize(message:)
+    @message = message
+  end
+
+  def invoke!
+    puts @message
+    return Unit
+  end
+end
+```
+
+If the calling code expected an outcome, it would be this:
+
+```
+# NO GOOD
+UnitAction.mk(
+  message: "Hi"
+).call! do |outcome|
+  ??, = *outcome # there's nothing to assign--this action reports no outcome!
+end
+```
+
+Consequently, we just `#call!` it and move on:
+
+```
+UnitAction.mk(
+  message: "Hi"
+).call!
+```
+
+Actions which have nothing to report (no `Outcome`) are simply invoked, and
+the calling code moves on. It's only logical: the `Unit` type means "I have
+nothing to say about what I've done."
+
+
+### On Composing Actions
+
+It is perfectly legitimate and desirable to do this:
+
+```ruby
+GreetPerson.mk(
+  name: "Joshua"
+).call! do |outcome|
+  entire_message, = *outcome
+
+  LogGreeting.mk(
+    entire_message: entire_message
+  ).call!
+
+  return Outcome.new(entire_message)
+end
+```
+
+
+## The Good, The Bad, and The Ugly
+
+Ruby is not a functional programming language. This is a fools errand, then!
+Nope. From [Wikipedia](https://en.wikipedia.org/wiki/Functional_programming):
+
+> Programming in a functional style can also be accomplished in languages that
+> are not specifically designed for functional programming.
+
+It is merely a style of programming which confers **immense** benefits for
+reasonability, maintainability, and extensibility of complex projects.
+Straitjacket is a set of a handful of constraints which let us access those
+benefits.
+
+Not to be too dogmatic, but it's possible to describe three kinds of code in
+a post-Straitjacket world. Broadly, code is:
+
+* **Good**: it adheres perfectly to the constraints
+* **Bad**: it could but does not yet (or will not) adhere to the constraints
+* **Ugly**: it cannot adhere to the constraints
+
+All three types of code are necessary in Ruby. Library code will probably never
+be Straitjacket-based. All code--Good, Bad, and Ugly--can be used by any other
+kind, so long as we are mindful of the side effects.
+
+Take an function in an application which uses ActiveRecord extensively:
+
+```ruby
+# NO GOOD
+def score_page_hits(user_stats_record:, factor:)
+  user_stats_record.page_hits * factor
+end
+module_function :score_page_hits
+```
+
+ActiveRecord is not hip to side effects (you may have noticed!), and it is
+possible that simply accessing an attribute issues a query to the underlying
+store. Consequently, this function is "bad" and should instead be an action.
+
+Of course, you could also write this perfectly good function:
+
+```ruby
+def score_page_hits(page_hits:, factor:)
+  page_hits * factor
+end
+module_function :score_page_hits
+```
+
+It would have to be called by some code (definitely an action) which did the
+dirty work of talking to ActiveRecord. But it itself is pure.
+
+**One of the chief ways of refactoring using Straitjacket is moving complex,
+side-effecting code "outward" into calling code, which at the outermost level is
+inevitably an action.**
+
+It is thus ironic that Straitjacket is implemented as a mixin. If you think
+about it, mixing in a module *is actually a state mutation* of the Ruby runtime.
+The very thing enabling our functional style of programming can never be "good".
+["Ceci n'est pas une pipe."](https://en.wikipedia.org/wiki/The_Treachery_of_Images)
+, indeed.
+
+In short:
+
+* Aspire to write Good code.
+* Aspire to make Bad code Good.
+* Feel free to use Ugly code anywhere, provided it doesn't break constraints.
+
+## Style
+
+There is a forthcoming document on style (maybe more than one), including:
+
+* variable naming conventions
+* keyword arguments and why they're preferable, and when they're not
+* how Straitjacket is monadic, and what monads are
+
+...and more.
+
+Thanks for reading.
